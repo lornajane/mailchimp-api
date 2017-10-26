@@ -1,89 +1,143 @@
 <?php
+
 /**
- * Super-simple, minimum abstraction MailChimp API v2 wrapper
- * 
+ * Super-simple, minimum abstraction MailChimp API v3 wrapper
+ *
  * Uses curl if available, falls back to file_get_contents and HTTP stream.
  * This probably has more comments than code.
- * 
- * @author Drew McLellan <drew.mclellan@gmail.com> Michael Minor <me@pixelbacon.com>
- * @version 1.1
+ *
+ * @author Drew McLellan <drew.mclellan@gmail.com> Michael Minor <me@pixelbacon.com> Daniel Boorn <daniel.boorn@gmail.com>
+ * @version 3.0
  */
 class MailChimp
 {
-	private $api_key;
-	private $api_endpoint = 'https://<dc>.api.mailchimp.com/2.0/';
-	private $verify_ssl   = false;
+    /**
+     * @var string
+     */
+    private $apiKey;
+    /**
+     * @var string
+     */
+    private $apiEndpoint = 'https://<dc>.api.mailchimp.com/3.0';
+    /**
+     * @var bool
+     */
+    private $verifySsl = false;
 
+    /**
+     * MailChimp constructor.
+     * @param $apiKey
+     */
+    function __construct($apiKey)
+    {
+        $this->apiKey = $apiKey;
+        $this->apiEndpoint = str_replace('<dc>', end(explode('-', $this->apiKey)), $this->apiEndpoint);
+    }
 
+    /**
+     * Generic HTTP request
+     *
+     * @param $method
+     * @param array $args
+     * @param string $verb
+     * @return bool|mixed
+     */
+    public function call($method, $args = array(), $verb = 'POST')
+    {
+        return $this->rawRequest($method, $args, $verb);
+    }
 
-	/**
-	 * Create a new instance
-	 * @param string $api_key Your MailChimp API key
-	 */
-	function __construct($api_key)
-	{
-		$this->api_key = $api_key;
-		list(, $datacentre) = explode('-', $this->api_key);
-		$this->api_endpoint = str_replace('<dc>', $datacentre, $this->api_endpoint);
-	}
+    /**
+     * GET HTTP request
+     *
+     * @param $method
+     * @param array $args
+     * @return bool|mixed
+     */
+    public function get($method, $args = array())
+    {
+        return $this->call($method, $args, 'GET');
+    }
 
+    /**
+     * POST HTTP request
+     *
+     * @param $method
+     * @param array $args
+     * @return bool|mixed
+     */
+    public function post($method, $args = array())
+    {
+        return $this->call($method, $args);
+    }
 
+    /**
+     * PUT HTTP Request
+     *
+     * @param $method
+     * @param array $args
+     * @return bool|mixed
+     */
+    public function put($method, $args = array())
+    {
+        return $this->call($method, $args, 'PUT');
+    }
 
+    /**
+     * PATCH HTTP Request
+     *
+     * @param $method
+     * @param array $args
+     * @return bool|mixed
+     */
+    public function patch($method, $args = array())
+    {
+        return $this->call($method, $args, 'PATCH');
+    }
 
-	/**
-	 * Call an API method. Every request needs the API key, so that is added automatically -- you don't need to pass it in.
-	 * @param  string $method The API method to call, e.g. 'lists/list'
-	 * @param  array  $args   An array of arguments to pass to the method. Will be json-encoded for you.
-	 * @return array          Associative array of json decoded API response.
-	 */
-	public function call($method, $args=array())
-	{
-		return $this->_raw_request($method, $args);
-	}
+    /**
+     * DELETE HTTP Request
+     *
+     * @param $method
+     * @param array $args
+     * @return bool|mixed
+     */
+    public function delete($method, $args = array())
+    {
+        return $this->call($method, $args, 'DELETE');
+    }
 
+    /**
+     * Fetch response from MailChimp API
+     *
+     * @param $method
+     * @param array $args
+     * @param string $verb
+     * @return bool|mixed
+     */
+    private function rawRequest($method, $args = array(), $verb = 'POST')
+    {
 
+        $url = $this->apiEndpoint . '/' . $method;
 
+        $json = json_encode($args);
 
-	/**
-	 * Performs the underlying HTTP request. Not very exciting
-	 * @param  string $method The API method to be called
-	 * @param  array  $args   Assoc array of parameters to be passed
-	 * @return array          Assoc array of decoded result
-	 */
-	private function _raw_request($method, $args=array())
-	{      
-		$args['apikey'] = $this->api_key;
+        $headers = array(
+            'Content-Type: application/json',
+            'Authorization: Basic ' . base64_encode("anystring:{$this->apiKey}"),
+            'Connection: close',
+            'Content-length: ' . strlen($json)
+        );
 
-		$url = $this->api_endpoint.'/'.$method.'.json';
+        $result = @file_get_contents($url, null, stream_context_create(array(
+            'http' => array(
+                'method'  => $verb,
+                'header'  => implode("\r\n", $headers) . "\r\n",
+                'content' => $json,
+            ),
+        )));
 
-		if( function_exists('curl_init') && function_exists('curl_setopt')){
-			$ch = curl_init();
-			curl_setopt($ch, CURLOPT_URL, $url);
-			curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
-			curl_setopt($ch, CURLOPT_USERAGENT, 'PHP-MCAPI/2.0');		
-			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-			curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-			curl_setopt($ch, CURLOPT_POST, true);
-			curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $this->verify_ssl);
-			curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($args));
-			$result = curl_exec($ch);
-			curl_close($ch);
-		} else {
-			$json_data = json_encode($args);
-			$result = file_get_contents($url,null,stream_context_create(array(
-			    'http' => array(
-			        'protocol_version' => 1.1,
-			        'user_agent'       => 'PHP-MCAPI/2.0',
-			        'method'           => 'POST',
-			        'header'           => "Content-type: application/json\r\n".
-			                              "Connection: close\r\n" .
-			                              "Content-length: " . strlen($json_data) . "\r\n",
-			        'content'          => $json_data,
-			    ),
-			)));
-		}
-
-		return $result ? json_decode($result, true) : false;
-	}
+        return $result ? json_decode($result, true) : false;
+    }
 
 }
