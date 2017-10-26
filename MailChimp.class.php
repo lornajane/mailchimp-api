@@ -31,7 +31,8 @@ class MailChimp
     function __construct($apiKey)
     {
         $this->apiKey = $apiKey;
-        $this->apiEndpoint = str_replace('<dc>', end(explode('-', $this->apiKey)), $this->apiEndpoint);
+        $parts = explode('-', $this->apiKey);
+        $this->apiEndpoint = str_replace('<dc>', end($parts), $this->apiEndpoint);
     }
 
     /**
@@ -134,10 +135,14 @@ class MailChimp
                 'method'  => $verb,
                 'header'  => implode("\r\n", $headers) . "\r\n",
                 'content' => $json,
+                'timeout' => 60.0,
             ),
+            'ssl'  => array(
+                'verify_peer' => $this->verifySsl,
+            )
         )));
 
-        return $result ? json_decode($result, true) : false;
+        return $result !== false ? json_decode($result, true) : false;
     }
 
 }

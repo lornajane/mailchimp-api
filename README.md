@@ -1,35 +1,38 @@
 MailChimp API
 =============
 
-Super-simple, minimum abstraction MailChimp API v2 wrapper, in PHP.
+Super-simple, minimum abstraction MailChimp API 3 wrapper, in PHP.
 
-I hate complex wrappers. This lets you get from the MailChimp API docs to the code as directly as possible.
+This lets you get from the MailChimp API docs to the code as directly as possible.
 
-Requires <del>curl</del> and a pulse. Abstraction is for chimps.
+MailChimp API 3 Documentation:
+
+http://developer.mailchimp.com/documentation/mailchimp/reference/overview/
 
 Examples
 --------
 
-List lists (lists/list method)
+```php
 
-	<?php
-	$MailChimp = new MailChimp('abc123abc123abc123abc123abc123-us1');
-	print_r($MailChimp->call('lists/list'));
+/**
+ * Simple Get User By List ID & Email Example
+ */
 
-Subscribe someone to a list
+require_once 'MailChimp.class.php';
 
-	<?php
-	$MailChimp = new MailChimp('abc123abc123abc123abc123abc123-us1');
-	$result = $MailChimp->call('lists/subscribe', array(
-					'id'                => 'b1234346',
-					'email'             => array('email'=>'davy@example.com'),
-					'merge_vars'        => array('FNAME'=>'Davy', 'LNAME'=>'Jones'),
-					'double_optin'      => false,
-					'update_existing'   => true,
-					'replace_interests' => false,
-					'send_welcome'      => false,
-				));
-	print_r($result);
+$apiKey = 'api-key-here';
+$listId = 'list-id-here';
+
+$mc = new MailChimp($apiKey);
+
+// Get all lists
+$r = $mc->get('lists');
+var_dump($r);
+
+// Get member by email from list by id
+$path = sprintf("lists/%s/members/%s", $listId, md5('email@example.com'));
+$r = $mc->get($path);
+var_dump($r);
 
 
-*Note for contributors:* This is not Code Golf.
+
