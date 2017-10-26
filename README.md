@@ -14,10 +14,6 @@ Examples
 
 ```php
 
-/**
- * Simple Get User By List ID & Email Example
- */
-
 require_once 'MailChimp.class.php';
 
 $apiKey = 'api-key-here';
